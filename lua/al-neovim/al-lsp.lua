@@ -3,11 +3,12 @@ local al_filetypes = {
     ["al"] = true;
 }
 
+
+local path_sep = vim.loop.os_uname().sysname == "Windows" and "\\" or "/"
+
 local function path_join(...)
 	return table.concat(vim.tbl_flatten {...}, path_sep)
 end
-
-local path_sep = vim.loop.os_uname().sysname == "Windows" and "\\" or "/"
 
 local function dirname(filepath)
 	local is_changed = false
@@ -21,7 +22,7 @@ end
 local al_lsp_config = {
     name = "al";
     cmd = { path_join(os.getenv("HOME"),
-        "/.vscode/extensions/ms-dynamics-smb.al-9.5.674382/bin/darwin/",
+        ".vscode/extensions/ms-dynamics-smb.al-9.5.674382/bin/darwin",
         "Microsoft.Dynamics.Nav.EditorServices.Host")
     };
 }
