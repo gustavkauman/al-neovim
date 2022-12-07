@@ -14,3 +14,5 @@ au BufReadPost *.al set filetype=al
 
 command! ALNeovim lua require("al-neovim.al-lsp").al_neovim()
 
+au BufReadPost * ALNeovim
+

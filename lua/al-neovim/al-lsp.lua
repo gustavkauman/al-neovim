@@ -19,10 +19,16 @@ local function dirname(filepath)
   	return result, is_changed
 end
 
+local bin_folder = vim.loop.os_uname().sysname == "Windows" and "" or "darwin"
+
 local al_lsp_config = {
     name = "al";
     cmd = { path_join(os.getenv("HOME"),
-        ".vscode/extensions/ms-dynamics-smb.al-9.5.674382/bin/darwin",
+        ".vscode",
+		"extensions",
+		"ms-dynamics-smb.al-9.5.674382", -- TODO: Make dynamic to get latest version
+		"bin",
+		bin_folder,
         "Microsoft.Dynamics.Nav.EditorServices.Host")
     };
 }
