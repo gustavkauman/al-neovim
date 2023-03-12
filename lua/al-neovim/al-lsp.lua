@@ -3,7 +3,6 @@ local al_filetypes = {
     ["al"] = true;
 }
 
-
 local path_sep = vim.loop.os_uname().sysname == "Windows" and "\\" or "/"
 
 local function path_join(...)
@@ -26,11 +25,48 @@ local al_lsp_config = {
     cmd = { path_join(os.getenv("HOME"),
         ".vscode",
 		"extensions",
-		"ms-dynamics-smb.al-9.5.674382", -- TODO: Make dynamic to get latest version
+		"ms-dynamics-smb.al-10.3.731181", -- TODO: Make dynamic to get latest version
 		"bin",
 		bin_folder,
         "Microsoft.Dynamics.Nav.EditorServices.Host")
     };
+    on_attach = function (client, bufnr)
+        -- Call this LSP method to make the AL server knows what workspace
+        -- we curretly are in `al/setActiveWorkspace`
+        local root_dir = find_root_dir(bufnr);
+
+        local hasProjectClosure = {
+            workspacePath = root_dir
+        }
+
+        client.request_sync("al/hasProjectClosureLoadedRequest", hasProjectClosure, 10000, bufnr);
+        local params = {
+            currentWorkspaceFolderPath = root_dir,
+            -- these settings are just based on the defaults from the vs code extension
+            settings = {
+                workspacePath = root_dir,
+                alResourceConfigurationSettings =  {
+                    assemblyProbingPaths = { "./.netpackages" },
+                    codeAnalyzers = {},
+                    enableCodeAnalysis = false,
+                    backgroundCodeAnalysis = true,
+                    packageCachePath = "./.alpackages",
+                    ruleSetPath = "./AppSource.json",
+                    enableCodeActions = false,
+                    incrementalBuild = false
+                },
+                setActiveWorkspace = true,
+                -- TODO: figure out what to put here...
+                dependencyParentWorkspacePath = "",
+                expectedProjectReferenceDefinitions = {},
+                -- AL VS Code extension has this property. Not sure what to put
+                -- here??
+                -- activeWorkspaceClosure: closure
+            }
+        }
+
+        client.request_sync("al/setActiveWorkspace", params, 10000, bufnr);
+    end
 }
 
 local function buffer_find_root_dir(bufnr, is_root_path)
@@ -54,27 +90,33 @@ local function buffer_find_root_dir(bufnr, is_root_path)
     end
 end
 
+function find_root_dir(bufnr)
+    return buffer_find_root_dir(bufnr, function(dir)
+        return vim.fn.filereadable(path_join(dir, 'app.json')) == 1
+    end);
+end
+
 function check_start_al_lsp()
     local bufnr = vim.api.nvim_get_current_buf()
     if not al_filetypes[vim.api.nvim_buf_get_option(bufnr, 'filetype')] then
         return
     end
-    
-    local root_dir = buffer_find_root_dir(bufnr, function(dir)
-        return vim.fn.filereadable(path_join(dir, 'app.json')) == 1
-    end)
+    local root_dir = find_root_dir(bufnr);
 
     if not root_dir then return end
 
     local client_id = al_lsps[root_dir]
+
     if not client_id then
         local new_conf = vim.tbl_extend("error", al_lsp_config, {
-            root_dir = root_dir;
+            root_dir = root_dir,
         })
+
         client_id = vim.lsp.start_client(new_conf)
+
         al_lsps[root_dir] = client_id
     end
-    
+
     vim.lsp.buf_attach_client(bufnr, client_id)
 end
 
